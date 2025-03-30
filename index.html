@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Year in Pixels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-custom {
+            display: grid;
+            grid-template-columns: repeat(13, minmax(0, 1fr));
+            gap: 1px;
+            border: 1px solid #ccc;
+            padding: 1px;
+        }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen bg-gray-100 p-4">
+    <div class="flex gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-md w-full max-w-sm overflow-auto" style="max-width: 450px;">
+            <h1 class="text-xl font-bold text-center mb-4">Year in Pixels</h1>
+            <div class="flex justify-center mb-4">
+                <label for="year-selector" class="mr-2 text-sm font-medium">Select Year:</label>
+                <select id="year-selector" class="border border-gray-300 rounded-md p-1 text-sm"></select>
+            </div>
+            <div id="grid-container" class="grid-custom"></div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-xl shadow-md h-full flex flex-col justify-center w-48">
+            <h2 class="text-sm font-semibold mb-2 text-center">Score Legend:</h2>
+            <div class="flex items-center gap-2 mb-1 whitespace-nowrap"><div class="w-6 h-6 bg-red-400 rounded-md"></div> <span class="text-xs">1 - Very Bad</span></div>
+            <div class="flex items-center gap-2 mb-1 whitespace-nowrap"><div class="w-6 h-6 bg-orange-400 rounded-md"></div> <span class="text-xs">2 - Bad</span></div>
+            <div class="flex items-center gap-2 mb-1 whitespace-nowrap"><div class="w-6 h-6 bg-yellow-400 rounded-md"></div> <span class="text-xs">3 - Neutral</span></div>
+            <div class="flex items-center gap-2 mb-1 whitespace-nowrap"><div class="w-6 h-6 bg-green-400 rounded-md"></div> <span class="text-xs">4 - Good</span></div>
+            <div class="flex items-center gap-2 whitespace-nowrap"><div class="w-6 h-6 bg-blue-400 rounded-md"></div> <span class="text-xs">5 - Very Good</span></div>
+        </div>
+    </div>
+    
+    <script>
+        const gridContainer = document.getElementById("grid-container");
+        const yearSelector = document.getElementById("year-selector");
+        const months = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+        const baseDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        const colors = {
+            1: 'bg-red-400',
+            2: 'bg-orange-400',
+            3: 'bg-yellow-400',
+            4: 'bg-green-400',
+            5: 'bg-blue-400'
+        };
+
+        let yearData = JSON.parse(localStorage.getItem('yearInPixels')) || {};
+        let selectedYear = new Date().getFullYear();
+        
+        function saveData() {
+            localStorage.setItem('yearInPixels', JSON.stringify(yearData));
+        }
+
+        function isLeapYear(year) {
+            return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        }
+
+        function updateGrid() {
+            gridContainer.innerHTML = "";
+            let scores = yearData[selectedYear] || {};
+            let daysInMonth = [...baseDaysInMonth];
+            if (isLeapYear(selectedYear)) daysInMonth[1] = 29;
+            
+            ["#", ...months].forEach((label) => {
+                let header = document.createElement('div');
+                header.className = "text-xs font-bold mb-1 border-b border-gray-300 w-full text-center";
+                header.innerText = label;
+                gridContainer.appendChild(header);
+            });
+            
+            for (let day = 1; day <= 31; day++) {
+                let dayNumberCell = document.createElement('div');
+                dayNumberCell.className = "w-6 h-6 text-xs flex items-center justify-center font-bold";
+                dayNumberCell.innerText = day;
+                gridContainer.appendChild(dayNumberCell);
+                
+                months.forEach((_, monthIndex) => {
+                    let div = document.createElement('div');
+                    let key = `${monthIndex + 1}-${day}`;
+                    div.className = `w-6 h-6 rounded-md border border-gray-200 flex items-center justify-center cursor-pointer`;
+                    
+                    if (day <= daysInMonth[monthIndex]) {
+                        if (scores[key]) div.classList.add(colors[scores[key]]);
+                        div.addEventListener('click', () => {
+                            if (!yearData[selectedYear]) yearData[selectedYear] = {};
+                            if (!yearData[selectedYear][key]) {
+                                yearData[selectedYear][key] = 1;
+                            } else if (yearData[selectedYear][key] === 5) {
+                                yearData[selectedYear][key] = null;
+                            } else {
+                                yearData[selectedYear][key] = (yearData[selectedYear][key] % 5) + 1;
+                            }
+                            saveData();
+                            updateGrid();
+                        });
+                    } else {
+                        div.classList.add("bg-gray-200");
+                    }
+                    gridContainer.appendChild(div);
+                });
+            }
+        }
+        
+        function populateYearSelector() {
+            const currentYear = new Date().getFullYear();
+            for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+                let option = document.createElement("option");
+                option.value = i;
+                option.innerText = i;
+                if (i === selectedYear) option.selected = true;
+                yearSelector.appendChild(option);
+            }
+        }
+        
+        yearSelector.addEventListener("change", (e) => {
+            selectedYear = parseInt(e.target.value);
+            updateGrid();
+        });
+        
+        populateYearSelector();
+        updateGrid();
+    </script>
+</body>
+</html>
